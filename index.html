@@ -259,7 +259,7 @@
                 };
                 event.targetDateDisplay = document.getElementById(`${event.id}-target-date-display`);
                 const dt = event.target;
-                event.targetDateDisplay.textContent = `(目標日時: ${dt.getFullYear()}年${dt.getMonth() + 1}月${dt.getDate()}日 ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')})`;
+                event.targetDateDisplay.textContent = `(スタート: ${dt.getFullYear()}年${dt.getMonth() + 1}月${dt.getDate()}日 ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')})`;
             });
             updateUI();
         }
