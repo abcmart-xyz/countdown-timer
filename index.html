@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>マイ・カウントダウン</title>
+    <style>
+        :root { --base-font-family: "游ゴシック体", "Yu Gothic", YuGothic, "ヒラギノ角ゴ ProN W3", "Hiragino Kaku Gothic ProN", "メイリオ", Meiryo, sans-serif; }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: var(--base-font-family);
+            overflow: hidden;
+            transition: background 1.5s ease-in-out;
+            background-size: cover;
+            background-position: center;
+        }
+        .view-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        .view {
+            position: absolute;
+            width: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+            transform: scale(1.0);
+            opacity: 0;
+            transition: opacity 1.0s ease-in-out;
+            pointer-events: none;
+        }
+        .view.visible { opacity: 1; pointer-events: auto; }
+        h1 { font-size: clamp(1.5rem, 6vw, 2.5rem); margin: 0 0 1rem 0; transition: color 1.0s; }
+        .countdown-container { font-family: Consolas, "Courier New", Courier, monospace; transition: color 0.5s ease-in-out; }
+        .time-block { display: inline-block; margin: 0 0.5rem; }
+        .time-number { font-size: clamp(3.5rem, 18vw, 8rem); line-height: 1; }
+        .time-label { font-size: clamp(1rem, 4vw, 1.5rem); font-weight: bold; display: block; margin-top: 0.5rem; transition: color 1.0s; }
+        .message { font-size: clamp(3rem, 12vw, 5rem); font-weight: bold; }
+        h2 { font-size: clamp(1rem, 3.5vw, 1.5rem); font-weight: normal; margin-top: 1rem; transition: color 1.0s; }
+        
+        #controls-container {
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+        }
+        #controls-container.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .nav-btn {
+            position: fixed; top: 50%; transform: translateY(-50%); background-color: rgba(0, 0, 0, 0.3); color: white;
+            border: none; font-size: clamp(1.2rem, 5vw, 2rem); font-weight: bold; padding: 15px 20px; cursor: pointer;
+            border-radius: 50%; z-index: 100; user-select: none;
+        }
+        #nav-buttons.hidden { display: none; }
+        #prev-btn { left: 10px; }
+        #next-btn { right: 10px; }
+        
+        .action-btn {
+            background: rgba(0,0,0,0.4); color: white; border: none; border-radius: 5px; padding: 5px 10px;
+            cursor: pointer; opacity: 0; transition: opacity 0.3s; position: absolute; pointer-events: none; font-size: 0.8rem;
+        }
+        .view.controls-visible .action-btn { opacity: 0.7; pointer-events: auto; }
+        .action-btn:hover { opacity: 1; }
+        .edit-btn { bottom: 10px; left: 10px; }
+        .delete-btn { bottom: 10px; right: 10px; background: rgba(220,53,69,0.5); }
+
+        /* ★修正：＋ボタンに独立した位置を指定 */
+        #add-event-toggle-btn {
+            position: fixed;
+            bottom: 90px; /* ⚙️ボタンの上 */
+            right: 20px;
+            width: 60px; height: 60px; font-size: 2rem;
+            background-color: #007BFF; color: white; border: none; border-radius: 50%;
+            cursor: pointer; z-index: 150; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.3s, opacity 0.3s;
+        }
+        #add-event-toggle-btn:hover { transform: scale(1.1); }
+        
+        #event-form-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 199;
+            display: flex; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s; pointer-events: none;
+        }
+        #event-form-container.visible { opacity: 1; pointer-events: auto; }
+        #event-form {
+            background: white; color: black; padding: 25px; border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 15px;
+            width: 90%; max-width: 400px;
+        }
+        #event-form h3 { margin: 0 0 10px 0; text-align: center; }
+        #event-form .form-group { display: flex; flex-direction: column; }
+        #event-form label { margin-bottom: 5px; font-weight: bold; }
+        #event-form input { font-size: 1rem; padding: 8px; border: 1px solid #CCC; border-radius: 5px; }
+        #event-form input[type="color"] { padding: 0; height: 40px; border: none; background: none; width: 100%; }
+        #event-form .color-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        #event-form .form-actions { display: flex; gap: 10px; margin-top: 10px; }
+        #event-form button { flex-grow: 1; font-size: 1rem; padding: 12px; border: none; border-radius: 5px; cursor: pointer; }
+        #submit-event-btn { background-color: #28a745; color: white; }
+        #cancel-event-btn { background-color: #6c757d; color: white; }
+        
+        #switch-mode-container {
+            position: fixed;
+            bottom: 25px;
+            left: 20px;
+            z-index: 150;
+            display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.4);
+            padding: 8px 12px; border-radius: 20px; color: white; font-size: 0.9rem; user-select: none;
+        }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { display: none; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #007BFF; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        #menu-toggle-btn {
+            position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; font-size: 2rem;
+            background-color: #6c757d; color: white; border: none; border-radius: 50%;
+            cursor: pointer; z-index: 201; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: transform 0.3s, background-color 0.3s;
+        }
+        #menu-toggle-btn.active { transform: rotate(90deg); }
+    </style>
+</head>
+<body>
+    <div class="view-container"></div>
+    
+    <div id="controls-container">
+        <div id="nav-buttons">
+            <button id="prev-btn" class="nav-btn">＜</button>
+            <button id="next-btn" class="nav-btn">＞</button>
+        </div>
+        <div id="switch-mode-container">
+            <label class="switch">
+                <input type="checkbox" id="auto-switch-toggle">
+                <span class="slider"></span>
+            </label>
+            <span>自動で切り替える</span>
+        </div>
+        <button id="add-event-toggle-btn">＋</button>
+    </div>
+    
+    <div id="event-form-container">
+        <form id="event-form" onsubmit="return false;">
+            <h3 id="form-title">イベント</h3>
+            <div class="form-group"><label for="event-title-input">タイトル</label><input type="text" id="event-title-input" required></div>
+            <div class="form-group"><label for="event-date-input">目標日時</label><input type="datetime-local" id="event-date-input" required></div>
+            <div class="color-inputs">
+                <div class="form-group"><label for="bg-color-input">背景色</label><input type="color" id="bg-color-input" value="#0D1B2A"></div>
+                <div class="form-group"><label for="countdown-color-input">数字の色</label><input type="color" id="countdown-color-input" value="#A2D2FF"></div>
+                <div class="form-group"><label for="title-color-input">タイトル色</label><input type="color" id="title-color-input" value="#E0E1DD"></div>
+                <div class="form-group"><label for="label-color-input">ラベル色</label><input type="color" id="label-color-input" value="#778DA9"></div>
+            </div>
+            <div class="form-actions">
+                <button type="button" id="cancel-event-btn">キャンセル</button>
+                <button type="submit" id="submit-event-btn">追加</button>
+            </div>
+        </form>
+    </div>
+    
+    <button id="menu-toggle-btn">⚙️</button>
+
+    <script>
+        // JavaScript部分は前回から変更ありません。
+        const initialEvents = [{
+            id: 'sample-event-1', title: '共通テスト 試験開始まであと', targetDate: '2026-01-17T09:30:00', endMessage: '試験開始',
+            background: { type: 'color', value: '#001f3f' }, fontColors: { title: '#F0FFFF', countdown: '#FFD700', label: '#F0FFFF', targetDate: '#F0FFFF' }
+        }];
+        const switchInterval = 10000;
+
+        let events = [];
+        let currentEventIndex = 0;
+        let autoSwitchTimer = null;
+        let formMode = 'add';
+        let editingEventId = null;
+
+        const ui = {
+            viewContainer: document.querySelector('.view-container'),
+            controlsContainer: document.getElementById('controls-container'),
+            menuToggleBtn: document.getElementById('menu-toggle-btn'),
+            navButtons: document.getElementById('nav-buttons'),
+            prevBtn: document.getElementById('prev-btn'),
+            nextBtn: document.getElementById('next-btn'),
+            addEventToggleBtn: document.getElementById('add-event-toggle-btn'),
+            formContainer: document.getElementById('event-form-container'),
+            form: document.getElementById('event-form'),
+            formTitle: document.getElementById('form-title'),
+            submitBtn: document.getElementById('submit-event-btn'),
+            cancelBtn: document.getElementById('cancel-event-btn'),
+            autoSwitchToggle: document.getElementById('auto-switch-toggle'),
+            switchModeContainer: document.getElementById('switch-mode-container'),
+            inputs: {
+                title: document.getElementById('event-title-input'),
+                date: document.getElementById('event-date-input'),
+                bgColor: document.getElementById('bg-color-input'),
+                countdownColor: document.getElementById('countdown-color-input'),
+                titleColor: document.getElementById('title-color-input'),
+                labelColor: document.getElementById('label-color-input')
+            }
+        };
+
+        function saveSettings() { localStorage.setItem('countdownEvents', JSON.stringify(events)); localStorage.setItem('countdownSettings', JSON.stringify({ autoSwitch: ui.autoSwitchToggle.checked })); }
+        function loadSettings() {
+            const savedEvents = localStorage.getItem('countdownEvents');
+            try {
+                const parsedEvents = JSON.parse(savedEvents);
+                events = Array.isArray(parsedEvents) && parsedEvents.length > 0 ? parsedEvents : initialEvents;
+            } catch (e) {
+                events = initialEvents;
+            }
+            const savedSettings = JSON.parse(localStorage.getItem('countdownSettings'));
+            ui.autoSwitchToggle.checked = savedSettings ? savedSettings.autoSwitch : true;
+        }
+
+        function render() {
+            ui.viewContainer.innerHTML = '';
+            if (events.length === 0) {
+                ui.viewContainer.innerHTML = '<h1>右下の⚙️ボタンからイベントを追加してください</h1>';
+                if(ui.navButtons) ui.navButtons.classList.add('hidden');
+                return;
+            }
+            events.forEach(event => {
+                const viewHTML = `
+                    <div id="${event.id}-view" class="view">
+                        <h1>${event.title}</h1>
+                        <div id="${event.id}-countdown-wrapper">
+                            <div class="countdown-container">
+                                <div class="time-block"><span id="${event.id}-days" class="time-number">00</span><span class="time-label">日</span></div>
+                                <div class="time-block"><span id="${event.id}-hours" class="time-number">00</span><span class="time-label">時間</span></div>
+                                <div class="time-block"><span id="${event.id}-minutes" class="time-number">00</span><span class="time-label">分</span></div>
+                                <div class="time-block"><span id="${event.id}-seconds" class="time-number">00</span><span class="time-label">秒</span></div>
+                            </div>
+                        </div>
+                        <h2 id="${event.id}-target-date-display"></h2>
+                        <button class="action-btn edit-btn" data-id="${event.id}">編集</button>
+                        <button class="action-btn delete-btn" data-id="${event.id}">削除</button>
+                    </div>`;
+                ui.viewContainer.insertAdjacentHTML('beforeend', viewHTML);
+            });
+            events.forEach(event => {
+                event.target = new Date(event.targetDate);
+                event.view = document.getElementById(`${event.id}-view`);
+                event.wrapper = document.getElementById(`${event.id}-countdown-wrapper`);
+                event.h1 = event.view.querySelector('h1');
+                event.countdownContainer = event.view.querySelector('.countdown-container');
+                event.labels = event.view.querySelectorAll('.time-label');
+                event.elements = {
+                    days: document.getElementById(`${event.id}-days`), hours: document.getElementById(`${event.id}-hours`),
+                    minutes: document.getElementById(`${event.id}-minutes`), seconds: document.getElementById(`${event.id}-seconds`)
+                };
+                event.targetDateDisplay = document.getElementById(`${event.id}-target-date-display`);
+                const dt = event.target;
+                event.targetDateDisplay.textContent = `(目標日時: ${dt.getFullYear()}年${dt.getMonth() + 1}月${dt.getDate()}日 ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')})`;
+            });
+            updateUI();
+        }
+
+        function updateUI() {
+            if (events.length === 0) return;
+            events.forEach(e => e.view?.classList.remove('visible'));
+            if (currentEventIndex >= events.length) currentEventIndex = Math.max(0, events.length - 1);
+            const currentEvent = events[currentEventIndex];
+            if (currentEvent && currentEvent.view) {
+                currentEvent.view.classList.add('visible');
+                applyTheme(currentEvent);
+            }
+            if(ui.navButtons) {
+                events.length > 1 ? ui.navButtons.classList.remove('hidden') : ui.navButtons.classList.add('hidden');
+            }
+        }
+
+        function applyTheme(event, dynamicColor = null) {
+            if(!event || !event.view) return;
+            document.body.style.backgroundImage = 'none';
+            document.body.style.backgroundColor = event.background.value;
+            const colors = event.fontColors;
+            event.h1.style.color = colors.title;
+            event.countdownContainer.style.color = dynamicColor || colors.countdown;
+            event.labels.forEach(label => label.style.color = colors.label);
+            event.targetDateDisplay.style.color = colors.targetDate;
+        }
+
+        function changeView(newIndex) {
+            if (events.length === 0) return;
+            events[currentEventIndex]?.view?.classList.remove('visible');
+            currentEventIndex = newIndex;
+            const nextEvent = events[currentEventIndex];
+            if (nextEvent) {
+                nextEvent.view.classList.add('visible');
+                applyTheme(nextEvent);
+            }
+        }
+
+        function startAutoSwitch() {
+            clearInterval(autoSwitchTimer);
+            if (ui.autoSwitchToggle.checked && events.length > 1) {
+                autoSwitchTimer = setInterval(() => changeView((currentEventIndex + 1) % events.length), switchInterval);
+            }
+        }
+        function stopAutoSwitch() { clearInterval(autoSwitchTimer); }
+
+        function updateAllCountdowns() {
+            const idsToDelete = [];
+            events.forEach(event => {
+                if (!event.target) event.target = new Date(event.targetDate);
+                const now = new Date();
+                const diff = event.target.getTime() - now.getTime();
+                if (diff < -1000) { idsToDelete.push(event.id); return; }
+                if (!event.view || !event.elements?.days) return;
+
+                if (diff <= 0) {
+                    if(!event.wrapper.innerHTML.includes("message")) {
+                        event.wrapper.innerHTML = `<div class="message" style="color:${event.fontColors.countdown}">${event.endMessage}</div>`;
+                    } return;
+                }
+                
+                if (event.view.classList.contains('visible')) {
+                    const daysLeft = diff / (1000 * 60 * 60 * 24);
+                    let dynamicColor = null;
+                    if (daysLeft <= 1) { dynamicColor = '#d32f2f'; }
+                    else if (daysLeft <= 3) { dynamicColor = '#ffa000'; }
+                    applyTheme(event, dynamicColor);
+                }
+                
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                event.elements.days.textContent = String(days).padStart(2, '0');
+                event.elements.hours.textContent = String(Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))).padStart(2, '0');
+                event.elements.minutes.textContent = String(Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+                event.elements.seconds.textContent = String(Math.floor((diff % (1000 * 60)) / 1000)).padStart(2, '0');
+            });
+            if (idsToDelete.length > 0) {
+                events = events.filter(event => !idsToDelete.includes(event.id));
+                saveSettings(); render(); startAutoSwitch();
+            }
+        }
+
+        function showForm(mode, eventId = null) {
+            formMode = mode; editingEventId = eventId;
+            if (mode === 'add') {
+                ui.formTitle.textContent = 'イベントを新規追加'; ui.submitBtn.textContent = '追加';
+                ui.form.reset();
+                ui.inputs.bgColor.value = '#0D1B2A';
+                ui.inputs.countdownColor.value = '#A2D2FF';
+                ui.inputs.titleColor.value = '#E0E1DD';
+                ui.inputs.labelColor.value = '#778DA9';
+            } else {
+                ui.formTitle.textContent = 'イベントを編集'; ui.submitBtn.textContent = '保存';
+                const event = events.find(e => e.id === eventId);
+                if (event) {
+                    ui.inputs.title.value = event.title;
+                    const dt = new Date(event.targetDate);
+                    if (!isNaN(dt)) {
+                        dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
+                        ui.inputs.date.value = dt.toISOString().slice(0, 16);
+                    }
+                    ui.inputs.bgColor.value = event.background.value;
+                    ui.inputs.titleColor.value = event.fontColors.title;
+                    ui.inputs.countdownColor.value = event.fontColors.countdown;
+                    ui.inputs.labelColor.value = event.fontColors.label;
+                }
+            }
+            ui.formContainer.classList.add('visible');
+        }
+        function hideForm() { ui.formContainer.classList.remove('visible'); }
+
+        ui.menuToggleBtn.addEventListener('click', () => {
+            ui.controlsContainer.classList.toggle('visible');
+            ui.menuToggleBtn.classList.toggle('active');
+            document.querySelectorAll('.view').forEach(v => v.classList.toggle('controls-visible'));
+        });
+        ui.addEventToggleBtn.addEventListener('click', () => showForm('add'));
+        ui.cancelBtn.addEventListener('click', hideForm);
+        ui.form.addEventListener('submit', () => {
+            const title = ui.inputs.title.value; const targetDate = ui.inputs.date.value;
+            if (!title || !targetDate) { alert('タイトルと日時を両方入力してください。'); return; }
+            const newTheme = {
+                background: { type: 'color', value: ui.inputs.bgColor.value },
+                fontColors: {
+                    title: ui.inputs.titleColor.value, countdown: ui.inputs.countdownColor.value,
+                    label: ui.inputs.labelColor.value, targetDate: ui.inputs.labelColor.value
+                }
+            };
+            if (formMode === 'add') {
+                const newEvent = { id: 'event-' + Date.now(), title, targetDate, endMessage: '目標達成！', ...newTheme };
+                events.push(newEvent); currentEventIndex = events.length - 1;
+            } else {
+                const eventIndex = events.findIndex(e => e.id === editingEventId);
+                if (eventIndex > -1) events[eventIndex] = { ...events[eventIndex], title, targetDate, ...newTheme };
+            }
+            saveSettings(); render(); startAutoSwitch(); hideForm();
+        });
+        ui.viewContainer.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-btn')) {
+                const id = e.target.dataset.id;
+                if (confirm('このイベントを削除しますか？')) {
+                    events = events.filter(event => event.id !== id);
+                    saveSettings(); render(); startAutoSwitch();
+                }
+            } else if (e.target.classList.contains('edit-btn')) { showForm('edit', e.target.dataset.id); }
+        });
+        ui.nextBtn.addEventListener('click', () => { if (events.length === 0) return; changeView((currentEventIndex + 1) % events.length); startAutoSwitch(); });
+        ui.prevBtn.addEventListener('click', () => { if (events.length === 0) return; changeView((currentEventIndex - 1 + events.length) % events.length); startAutoSwitch(); });
+        ui.autoSwitchToggle.addEventListener('change', () => {
+            if (ui.autoSwitchToggle.checked) startAutoSwitch(); else stopAutoSwitch();
+            saveSettings();
+        });
+
+        loadSettings();
+        render();
+        startAutoSwitch();
+        setInterval(updateAllCountdowns, 1000);
+    </script>
+</body>
+</html>
