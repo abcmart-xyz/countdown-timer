@@ -41,7 +41,7 @@
         h1 { font-size: clamp(1.5rem, 6vw, 2.5rem); margin: 0 0 1rem 0; transition: color 1.0s; }
         .countdown-container { font-family: Consolas, "Courier New", Courier, monospace; transition: color 0.5s ease-in-out; }
         .time-block { display: inline-block; margin: 0 0.5rem; }
-        .time-number { font-size: clamp(3.5rem, 18vw, 8rem); font-weight: bolder; line-height: 1; }
+        .time-number { font-size: clamp(3.5rem, 18vw, 8rem); font-weight: bold; line-height: 1; }
         .time-label { font-size: clamp(1.2rem, 5vw, 3rem); font-weight: bold; display: block; margin-top: 0.5rem; transition: color 1.0s; }
         .message { font-size: clamp(3rem, 12vw, 5rem); font-weight: bold; }
         h2 { font-size: clamp(1.2rem, 4vw, 2rem); font-weight: bold; margin-top: 1rem; transition: color 1.0s; }
@@ -153,7 +153,7 @@
         <form id="event-form" onsubmit="return false;">
             <h3 id="form-title">イベント</h3>
             <div class="form-group"><label for="event-title-input">タイトル</label><input type="text" id="event-title-input" required></div>
-            <div class="form-group"><label for="event-date-input">目標日時</label><input type="datetime-local" id="event-date-input" required></div>
+            <div class="form-group"><label for="event-date-input">スタート日時</label><input type="datetime-local" id="event-date-input" required></div>
             <div class="color-inputs">
                 <div class="form-group"><label for="bg-color-input">背景色</label><input type="color" id="bg-color-input" value="#0D1B2A"></div>
                 <div class="form-group"><label for="countdown-color-input">数字の色</label><input type="color" id="countdown-color-input" value="#A2D2FF"></div>
